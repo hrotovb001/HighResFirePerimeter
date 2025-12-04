@@ -1,0 +1,35 @@
+perim_input  = viirs.perim.conus
+model_input  = fire.init.conus
+model_output = fire.pred.conus
+
+frp_source = 0
+
+time_start = 202407250300
+time_end   = 202407251400
+time_freq  = 1
+
+lat_lower_left  = 39.5
+lat_upper_right = 40.5
+lon_lower_left  = 237.8
+lon_upper_right = 238.8
+
+opt_frpgen     = 1
+opt_inputgen   = 1
+opt_forecast   = 1
+opt_intensity  = 1
+opt_mapgen     = 1
+opt_evaluation = 1
+
+man_fire = 0
+man_lat  = 38.68
+man_lon  = -78.35
+man_lvl  = 200
+
+path_frp  = /home/hrotovb001/RAVE
+path_elv  = /home/hrotovb001/MERIT_DEM
+path_ast  = /home/hrotovb001/VIIRS-AST
+path_fh   = /home/hrotovb001/GLAD
+path_vhi  = /home/hrotovb001/VIIRS-VHI
+path_mete = /home/hrotovb001/HRRR
+path_rave = /home/hrotovb001/RAVE
+
