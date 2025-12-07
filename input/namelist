@@ -31,5 +31,5 @@ path_ast  = /home/hrotovb001/VIIRS-AST
 path_fh   = /home/hrotovb001/GLAD
 path_vhi  = /home/hrotovb001/VIIRS-VHI
 path_mete = /home/hrotovb001/HRRR
-path_rave = /home/hrotovb001/RAVE
+path_peri = /home/hrotovb001/Perimeter
 
