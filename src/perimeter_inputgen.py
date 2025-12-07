@@ -32,7 +32,14 @@ def file_finder(item, date, initial_hour, hour):
     namelist = pd.read_csv("./input/namelist", header=None, delimiter="=")
     namelist = namelist[1]
 
-    if item == "elv":
+    if item == "rave":
+        return (
+            str(namelist[21].replace(" ", ""))
+            + "/RAVE-HrlyEmiss-3km_v1r3_blend_s"
+            + date.strftime("%Y%m%d%H")
+            + "00000*.nc"
+        )
+    elif item == "elv":
         return str(namelist[22].replace(" ", "")) + "/ELEV_4X_1Y_V1_Yamazaki.nc"
     elif item == "ast":
         return str(namelist[23].replace(" ", "")) + "/VIIRS_AST_2020_grid3km.nc"
@@ -84,13 +91,6 @@ def file_finder(item, date, initial_hour, hour):
             + "z.wrfsfcf"
             + ("%02d" % hour)
             + ".grib2"
-        )
-    elif item == "rave":
-        return (
-            str(namelist[27].replace(" ", ""))
-            + "/RAVE-HrlyEmiss-3km_v1r3_blend_s"
-            + date.strftime("%Y%m%d%H")
-            + "00000*.nc"
         )
 
 
