@@ -25,20 +25,23 @@ def preprocessor(filename, fire_id, time, lat_lim, lon_lim):
     hour = time[8:10]
 
     # ---- Reading Data ----
-    fname_beta = "Hourly_Emissions_3km_" + date + "0000_" + date + "2300.nc"
     fname = (
-        "RAVE-HrlyEmiss-3km_v*r*_blend_s"
-        + date
+        "CONUS|"
+        + fire_id
+        + "|"
+        + date[:4]
+        + "-"
+        + date[4:6]
+        + "-"
+        + date[6:]
+        + "T"
         + hour
-        + "00000_e"
-        + date
-        + hour
-        + "59590*.nc"
+        + "|00|00.nc"
     )
     f_ori = [
         f
         for f in os.listdir(path_frp)
-        if fnmatch.fnmatch(f, fname_beta) or fnmatch.fnmatch(f, fname)
+        if fnmatch.fnmatch(f, fname)
     ][0]
     f_ori = path_frp + "/" + f_ori
 

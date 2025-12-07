@@ -282,7 +282,7 @@ for fire in fires:
 
 # %%
 
-file_path = 'fires/F10911.geojson'
+file_path = '2020-2021 fires/F10911.geojson'
 gdf = gpd.read_file(file_path)
 
 m = gdf.explore(
@@ -309,6 +309,35 @@ with open("temp.txt", "w") as f:
             continue
     
         print(file, start_time, end_time, area, growth_frames, bbox, file=f)
+
+# %%
+
+import pandas as pd
+import os
+
+fire_dates = []
+for file in os.listdir('fires'):
+    if file.endswith('.geojson'):
+        gdf = gpd.read_file(os.path.join('fires', file))
+        start_time = gdf['t'].min()
+        fire_dates.append(pd.to_datetime(start_time))
+
+df = pd.DataFrame(fire_dates, columns=['start_date'])
+df['start_date'] = pd.to_datetime(df['start_date'])
+
+df = df.set_index('start_date')
+
+daily_counts = df.resample('D').size()
+
+rolling_counts = daily_counts.rolling(window=30).sum()
+
+max_fires_date = rolling_counts.idxmax()
+max_fires_count = rolling_counts.max()
+
+start_date = max_fires_date - pd.Timedelta(days=29)
+
+print(f"The 30-day period with the most fires started on: {start_date.date()}")
+print(f"Number of fires in this period: {int(max_fires_count)}")
 
 # %%
 

@@ -149,7 +149,7 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     fsize = 67  # extend fire grid
 
     # variable list
-    firelist = ["fire"]
+    firelist = ["fire", "rave"]
     geolist = ["elv", "ast", "doy", "hour"]
     veglist = ["fh", "vhi"]
     metlist = ["t2m", "sh2", "prate", "wd", "ws"]
@@ -188,9 +188,68 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     logger.info(f"Selecting data for date: {dd}, hour: {hh}Z, input array shape: {INPUT.shape}")
 
     # ---- Reading Input Variables ----
-    # frp, lat, lon
+    # perimeter
     INPUT[:, :, INPUTLIST.index("fire")] = np.copy(FIRE)
     logger.debug("FIRE data copied to input array")
+
+    # frp
+    logger.info("Processing frp data (rave)")
+    filename = file_finder("rave", dd, initial_hour, forecast_hour)
+
+    if os.path.isfile(filename) is False:
+        logger.error(f"Incorrect input file: rave - File not found: {filename}")
+        return 1
+
+    logger.debug(f"Reading rave from: {filename}")
+    readin = Dataset(filename)
+    yt = readin["lat"][:]
+    xt = readin["lon"][:]
+    xt[xt < 0] = xt[xt < 0] + 360
+    index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
+    index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
+
+    logger.debug(f"Rave data original shape: {readin['data'][:].shape}")
+    logger.debug(f"Latitude indices: {index1.shape}, Longitude indices: {index2.shape}")
+
+    if (index1[0] == 0) & (index2[0] == 0):
+        yt = yt[index1[0] : index1[-1] + 2]
+        xt = xt[index2[0] : index2[-1] + 2]
+        data = readin["data"][index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
+    elif index1[0] == 0:
+        yt = yt[index1[0] : index1[-1] + 2]
+        xt = xt[index2[0] - 1 : index2[-1] + 2]
+        data = readin["data"][
+            index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
+        ]
+    elif index2[0] == 0:
+        yt = yt[index1[0] - 1 : index1[-1] + 2]
+        xt = xt[index2[0] : index2[-1] + 2]
+        data = readin["data"][
+            index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2
+        ]
+    else:
+        yt = yt[index1[0] - 1 : index1[-1] + 2]
+        xt = xt[index2[0] - 1 : index2[-1] + 2]
+        data = readin["data"][
+            index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
+        ]
+    data[data < 0] = 0
+    logger.debug(f"Rave data after subsetting: shape={data.shape}, "
+                f"range=[{data.min():.2f}, {data.max():.2f}]")
+
+    xt_grid, yt_grid = np.meshgrid(xt, yt)
+    data_grid = mapping(
+        LAT, LON, data.flatten(), yt_grid.flatten(), xt_grid.flatten(), "linear", np.nan
+    )
+    data_grid[data_grid < 0] = np.nan
+
+    INPUT[:, :, INPUTLIST.index("rave")] = np.copy(data_grid)
+    logger.info(f"Rave processing completed. NaN count: {np.isnan(data_grid).sum()}")
+
+    readin.close()
+    del [filename, readin, yt, xt, yt_grid, xt_grid, index1, index2, data, data_grid]
+
+
 
     # elv
     logger.info("Processing elevation data (elv)")
