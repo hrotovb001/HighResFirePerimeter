@@ -6,6 +6,8 @@ import os
 import warnings
 import logging
 from datetime import datetime
+import glob
+from math import floor, ceil
 
 import numpy as np
 import pandas as pd
@@ -32,19 +34,20 @@ def file_finder(item, date, initial_hour, hour):
     namelist = pd.read_csv("./input/namelist", header=None, delimiter="=")
     namelist = namelist[1]
 
-    if item == "rave":
+    if item == "frp":
         return (
             str(namelist[21].replace(" ", ""))
-            + "/RAVE-HrlyEmiss-3km_v1r3_blend_s"
-            + date.strftime("%Y%m%d%H")
+            + "/RAVE-HrlyEmiss-3km_v2r0_blend_s"
+            + date
+            + ("%02d" % initial_hour)
             + "00000*.nc"
         )
     elif item == "elv":
-        return str(namelist[22].replace(" ", "")) + "/ELEV_4X_1Y_V1_Yamazaki.nc"
+        return str(namelist[22].replace(" ", "")) + "/MERIT_DEM.nc"
     elif item == "ast":
-        return str(namelist[23].replace(" ", "")) + "/VIIRS_AST_2020_grid3km.nc"
+        return str(namelist[23].replace(" ", "")) + "/VIIRS_AST_2024.nc"
     elif item == "fh":
-        return str(namelist[24].replace(" ", "")) + "/GLAD_FH_grid3km_2020.nc"
+        return str(namelist[24].replace(" ", "")) + "/GLAD.nc"
     elif item == "vhi":
         week = datetime(int(date[:4]), int(date[4:6]), int(date[6:])).isocalendar().week
         lastweek = datetime(int(date[:4]), 12, 31).isocalendar().week
@@ -74,9 +77,9 @@ def file_finder(item, date, initial_hour, hour):
         return (
             str(namelist[26].replace(" ", ""))
             + "/"
-            + date.strftime("%Y%m%d")
+            + date[:8]
             + "/hrrr.t"
-            + initial_hour
+            + ("%02d" % initial_hour)
             + "z.wrfsfcf"
             + ("%02d" % hour)
             + ".grib2"
@@ -85,9 +88,9 @@ def file_finder(item, date, initial_hour, hour):
         return (
             str(namelist[26].replace(" ", ""))
             + "/"
-            + date.strftime("%Y%m%d")
+            + date[:8]
             + "/hrrr.t"
-            + initial_hour
+            + ("%02d" % initial_hour)
             + "z.wrfsfcf"
             + ("%02d" % hour)
             + ".grib2"
@@ -149,7 +152,7 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     fsize = 67  # extend fire grid
 
     # variable list
-    firelist = ["fire", "rave"]
+    firelist = ["fire", "frp"]
     geolist = ["elv", "ast", "doy", "hour"]
     veglist = ["fh", "vhi"]
     metlist = ["t2m", "sh2", "prate", "wd", "ws"]
@@ -192,47 +195,53 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     INPUT[:, :, INPUTLIST.index("fire")] = np.copy(FIRE)
     logger.debug("FIRE data copied to input array")
 
-    # frp
-    logger.info("Processing frp data (rave)")
-    filename = file_finder("rave", dd, initial_hour, forecast_hour)
+    # rave
+    logger.info("Processing rave data (frp)")
+    filename = file_finder("frp", dd, initial_hour, forecast_hour)
 
-    if os.path.isfile(filename) is False:
-        logger.error(f"Incorrect input file: rave - File not found: {filename}")
+    matches = glob.glob(filename)
+    if matches:
+        filename = matches[0]
+    else:
+        logger.error(f"Incorrect input file: frp - File not found: {filename}")
         return 1
 
-    logger.debug(f"Reading rave from: {filename}")
+    logger.debug(f"Reading frp from: {filename}")
     readin = Dataset(filename)
-    yt = readin["lat"][:]
-    xt = readin["lon"][:]
-    xt[xt < 0] = xt[xt < 0] + 360
+    yt = np.flip(readin["grid_latt"][:, 0])
+    xt = readin["grid_lont"][0, :]
+
+    data = np.squeeze(readin["FRP_MEAN"][0, :, :])
+    data = np.flipud(data)
+    data = np.array(data)  # fill value = -1
+    data[data == -1] = 0
+
+    qa = readin["QA"][0, :, :]
+    qa = np.flipud(qa)
+    data[qa == 1] = 0  # use QA = 2 and 3 only
+
     index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
     index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
 
-    logger.debug(f"Rave data original shape: {readin['data'][:].shape}")
+    logger.debug(f"Rave data original shape: {readin['FRP_MEAN'][:].shape}")
     logger.debug(f"Latitude indices: {index1.shape}, Longitude indices: {index2.shape}")
 
     if (index1[0] == 0) & (index2[0] == 0):
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        data = readin["data"][index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
+        data = data[index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
     elif index1[0] == 0:
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        data = readin["data"][
-            index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
-        ]
+        data = data[index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
     elif index2[0] == 0:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        data = readin["data"][
-            index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2
-        ]
+        data = data[index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
     else:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        data = readin["data"][
-            index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
-        ]
+        data = data[index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
     data[data < 0] = 0
     logger.debug(f"Rave data after subsetting: shape={data.shape}, "
                 f"range=[{data.min():.2f}, {data.max():.2f}]")
@@ -243,7 +252,7 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     )
     data_grid[data_grid < 0] = np.nan
 
-    INPUT[:, :, INPUTLIST.index("rave")] = np.copy(data_grid)
+    INPUT[:, :, INPUTLIST.index("frp")] = np.copy(data_grid)
     logger.info(f"Rave processing completed. NaN count: {np.isnan(data_grid).sum()}")
 
     readin.close()
@@ -267,29 +276,29 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
     index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
 
-    logger.debug(f"Elevation data original shape: {readin['data'][:].shape}")
+    logger.debug(f"Elevation data original shape: {readin['Band1'].shape}")
     logger.debug(f"Latitude indices: {index1.shape}, Longitude indices: {index2.shape}")
 
     if (index1[0] == 0) & (index2[0] == 0):
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        data = readin["data"][index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
+        data = readin["Band1"][index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
     elif index1[0] == 0:
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        data = readin["data"][
+        data = readin["Band1"][
             index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
         ]
     elif index2[0] == 0:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        data = readin["data"][
+        data = readin["Band1"][
             index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2
         ]
     else:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        data = readin["data"][
+        data = readin["Band1"][
             index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
         ]
     data[data < 0] = 0
@@ -377,16 +386,15 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     # hour
     logger.info("Processing local hour")
     readin = Dataset("./fix/timezones_voronoi_1x1.nc")
-    yt = np.flip(readin["lat"][:])
+    yt = readin["lat"][:]
     xt = readin["lon"][:]
     xt[xt < 0] = xt[xt < 0] + 360
-    index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
+    index1 = np.squeeze(np.argwhere((yt >= floor(lat_lim[0])) & (yt <= ceil(lat_lim[1]))))
     index1 = np.atleast_1d(index1)
-    index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
+    index2 = np.squeeze(np.argwhere((xt >= floor(lon_lim[0])) & (xt <= ceil(lon_lim[1]))))
     index2 = np.atleast_1d(index2)
 
     offset = np.squeeze(readin["UTC_OFFSET"][0, :, :])
-    offset = np.flipud(offset)
 
     if (index1[0] == 0) & (index2[0] == 0):
         yt = yt[index1[0] : index1[-1] + 2]
@@ -436,7 +444,7 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
 
     logger.debug(f"Reading forest height from: {filename}")
     readin = Dataset(filename)
-    yt = np.flip(readin["lat"][:])
+    yt = readin["lat"][:]
     xt = readin["lon"][:]
     yt = np.round(yt, 3)
     xt = np.round(xt, 3)
@@ -444,28 +452,25 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
     index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
 
-    data = np.squeeze(readin["forest_canopy_height"][:])
-    data = np.flipud(data)
-    logger.debug(f"Forest height data original shape: {data.shape}, "
-                f"range=[{data.min():.2f}, {data.max():.2f}]")
+    logger.debug(f"Forest height data original shape: {readin['Band1'].shape}")
 
     # fh, lat x lon
     if (index1[0] == 0) & (index2[0] == 0):
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        data = data[index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
+        data = readin["Band1"][index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
     elif index1[0] == 0:
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        data = data[index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
+        data = readin["Band1"][index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
     elif index2[0] == 0:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        data = data[index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
+        data = readin["Band1"][index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
     else:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        data = data[index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
+        data = readin["Band1"][index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
 
     xt_grid, yt_grid = np.meshgrid(xt, yt)
     data_grid = mapping(
@@ -904,8 +909,8 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     # normalization coef
     coef = pd.read_csv("./model/model_normalization_coef.txt")
     coef = np.array(coef)
-    a = coef[0, np.append(0, np.arange(3, 14))]
-    b = coef[1, np.append(0, np.arange(3, 14))]
+    a = coef[0, np.append([0, 1], np.arange(4, 15))]
+    b = coef[1, np.append([0, 1], np.arange(4, 15))]
     logger.debug(f"Normalization coefficients - a: {a}, b: {b}")
 
     for i in np.arange(NN):

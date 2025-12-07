@@ -17,13 +17,13 @@ warnings.simplefilter(action="ignore")
 def preprocessor(filename, fire_id, time, lat_lim, lon_lim):
     namelist = pd.read_csv("./input/namelist", header=None, delimiter="=")
     namelist = namelist[1]
-    path_frp = str(namelist[21].replace(" ", ""))
+    path_frp = str(namelist[27].replace(" ", ""))
 
-    f_output = "./input/" + time + "/" + filename + "." + time + ".nc"
+    f_output = "./input/" + fire_id + "/" + time + "/" + filename + "." + time + ".nc"
 
     date = time[:8]
     hour = time[8:10]
-
+    
     # ---- Reading Data ----
     fname = (
         "CONUS|"
@@ -36,7 +36,7 @@ def preprocessor(filename, fire_id, time, lat_lim, lon_lim):
         + date[6:]
         + "T"
         + hour
-        + "|00|00.nc"
+        + ":00:00.nc"
     )
     f_ori = [
         f
@@ -47,13 +47,13 @@ def preprocessor(filename, fire_id, time, lat_lim, lon_lim):
 
     if os.path.isfile(f_ori) is True:
         readin = Dataset(f_ori)
-        yt = readin["y"][0, :]
-        xt = readin["x"][0, :]
+        yt = np.flip(readin["y"][:])
+        xt = readin["x"][:]
+        xt[xt < 0] = xt[xt < 0] + 360
 
-        data = np.squeeze(readin["fire"][0, :, :])
+        data = np.squeeze(readin["fire"][:, :])
         data = np.flipud(data)
-        data = np.array(data)  # fill value = -1
-        data[data == -1] = 0
+        data = np.array(data)
 
         index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
         index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
@@ -78,7 +78,7 @@ def preprocessor(filename, fire_id, time, lat_lim, lon_lim):
         xt_grid, yt_grid = np.meshgrid(xt, yt)
 
         readin.close()
-        del [readin, yt, xt, qa, index1, index2]
+        del [readin, yt, xt, index1, index2]
 
     else:
         return 1
