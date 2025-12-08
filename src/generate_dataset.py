@@ -33,18 +33,22 @@ def main():
             if lon_lim[1] < 0:
                 lon_lim[1] += 360
 
-            y_offset = (0.3 - lat_lim[1] + lat_lim[0]) / 2
-            x_offset = (0.3 - lon_lim[1] + lon_lim[0]) / 2
+            y_offset = (0.2 - lat_lim[1] + lat_lim[0]) / 2
+            x_offset = (0.2 - lon_lim[1] + lon_lim[0]) / 2
             lat_lim[0] -= y_offset
             lat_lim[1] += y_offset
             lon_lim[0] -= x_offset
             lon_lim[1] += x_offset
 
-            print(lat_lim, lon_lim)
-
             if not os.path.exists("./input/" + str(perimeter["fireid"]) + "/" + time.strftime("%Y%m%d%H")):
                 os.makedirs("./input/" + str(perimeter["fireid"]) + "/" + time.strftime("%Y%m%d%H"))
             perim_preprocessor.preprocessor(namelist[0][1:], str(perimeter["fireid"]), time.strftime("%Y%m%d%H"), lat_lim, lon_lim)
+            try:
+                if not os.path.exists("./input/" + str(perimeter["fireid"]) + "/" + (time + timedelta(hours=12)).strftime("%Y%m%d%H")):
+                    os.makedirs("./input/" + str(perimeter["fireid"]) + "/" + (time + timedelta(hours=12)).strftime("%Y%m%d%H"))
+                perim_preprocessor.preprocessor(namelist[0][1:], str(perimeter["fireid"]), (time + timedelta(hours=12)).strftime("%Y%m%d%H"), lat_lim, lon_lim)
+            except:
+                break
             for i in range(12):
                 current_time = time + timedelta(hours=i)
                 current_time_str = current_time.strftime("%Y%m%d%H")
@@ -52,8 +56,9 @@ def main():
                     os.makedirs("./input/" + str(perimeter["fireid"]) + "/" + current_time_str)
                 f_input = "./input/" + str(perimeter["fireid"]) + "/" + time.strftime("%Y%m%d%H") + "/" + namelist[0][1:] + "." + time.strftime("%Y%m%d%H") + ".nc"
                 f_output = "./input/" + str(perimeter["fireid"]) + "/" + current_time_str + "/" + namelist[1][1:] + "." + current_time_str + ".nc"
-                print(f_input, f_output)
-                perimeter_inputgen.main_driver(current_time.hour, 0, f_input, f_output, lat_lim, lon_lim)
+                result = perimeter_inputgen.main_driver(current_time.hour, 0, f_input, f_output, lat_lim, lon_lim)
+                if result != 0:
+                    break
 
 if __name__ == "__main__":
     main()

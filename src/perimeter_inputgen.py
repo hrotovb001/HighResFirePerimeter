@@ -307,9 +307,9 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
 
     xt_grid, yt_grid = np.meshgrid(xt, yt)
     data_grid = mapping(
-        LAT, LON, data.flatten(), yt_grid.flatten(), xt_grid.flatten(), "linear", np.nan
+        LAT, LON, data.flatten(), yt_grid.flatten(), xt_grid.flatten(), "linear", 0
     )
-    data_grid[data_grid < 0] = np.nan
+    data_grid[data_grid < 0] = 0
 
     INPUT[:, :, INPUTLIST.index("elv")] = np.copy(data_grid)
     logger.info(f"Elevation processing completed. NaN count: {np.isnan(data_grid).sum()}")
@@ -474,9 +474,9 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
 
     xt_grid, yt_grid = np.meshgrid(xt, yt)
     data_grid = mapping(
-        LAT, LON, data.flatten(), yt_grid.flatten(), xt_grid.flatten(), "linear", np.nan
+        LAT, LON, data.flatten(), yt_grid.flatten(), xt_grid.flatten(), "linear", 0
     )
-    data_grid[data_grid < 0] = np.nan
+    data_grid[data_grid < 0] = 0
     data_grid[np.isnan(data_grid)] = 0
 
     INPUT[:, :, INPUTLIST.index("fh")] = np.copy(data_grid)
@@ -588,9 +588,9 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
         yt_grid.flatten(),
         xt_grid.flatten(),
         "nearest",
-        np.nan,
+        0,
     )
-    data_grid[data_grid == -999] = np.nan
+    data_grid[data_grid == -999] = 0
 
     INPUT[:, :, INPUTLIST.index("vhi")] = np.copy(data_grid)
     logger.info(f"VHI processing completed. Range: [{np.nanmin(data_grid):.3f}, {np.nanmax(data_grid):.3f}], "
@@ -836,6 +836,7 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     index = index.astype(int)
 
     if index.size != 0:
+        logger.error('Removing frames with NaN values...')
         INPUTFRAME = np.delete(INPUTFRAME, index, axis=0)
         LATFRAME = np.delete(LATFRAME, index, axis=0)
         LONFRAME = np.delete(LONFRAME, index, axis=0)
@@ -850,6 +851,7 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     index = np.squeeze(np.argwhere(fire_count == 1))
 
     if index.size != 0:
+        logger.error('Removing isolated small fires...')
         INPUTFRAME = np.delete(INPUTFRAME, index, axis=0)
         LATFRAME = np.delete(LATFRAME, index, axis=0)
         LONFRAME = np.delete(LONFRAME, index, axis=0)
@@ -861,6 +863,7 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     index = np.unique(index)
 
     if index.size != 0:
+        logger.error('Removing frames with water bodies...')
         INPUTFRAME = np.delete(INPUTFRAME, index, axis=0)
         LATFRAME = np.delete(LATFRAME, index, axis=0)
         LONFRAME = np.delete(LONFRAME, index, axis=0)

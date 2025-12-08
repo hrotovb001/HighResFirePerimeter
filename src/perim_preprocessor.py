@@ -20,6 +20,8 @@ def preprocessor(filename, fire_id, time, lat_lim, lon_lim):
     path_frp = str(namelist[27].replace(" ", ""))
 
     f_output = "./input/" + fire_id + "/" + time + "/" + filename + "." + time + ".nc"
+    if os.path.isfile(f_output) is True:
+        return
 
     date = time[:8]
     hour = time[8:10]
@@ -55,30 +57,48 @@ def preprocessor(filename, fire_id, time, lat_lim, lon_lim):
         data = np.flipud(data)
         data = np.array(data)
 
-        index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
-        index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
-
-        if (index1[0] == 0) & (index2[0] == 0):
-            yt = yt[index1[0] : index1[-1] + 2]
-            xt = xt[index2[0] : index2[-1] + 2]
-            data = data[index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
-        elif index1[0] == 0:
-            yt = yt[index1[0] : index1[-1] + 2]
-            xt = xt[index2[0] - 1 : index2[-1] + 2]
-            data = data[index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
-        elif index2[0] == 0:
-            yt = yt[index1[0] - 1 : index1[-1] + 2]
-            xt = xt[index2[0] : index2[-1] + 2]
-            data = data[index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
-        else:
-            yt = yt[index1[0] - 1 : index1[-1] + 2]
-            xt = xt[index2[0] - 1 : index2[-1] + 2]
-            data = data[index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
-
+        # ---- ENSURE OUTPUT COVERS FULL REQUESTED BOUNDS ----
+        # Get grid spacing (positive values, assuming regular grid)
+        dlat = np.abs(np.median(np.diff(yt)))
+        dlon = np.abs(np.median(np.diff(xt)))
+        
+        # Pad latitude coordinates and data if source doesn't cover lower bound
+        if yt[0] > lat_lim[0]:
+            n_pad = int(np.ceil((yt[0] - lat_lim[0]) / dlat))
+            yt_pad = yt[0] - np.arange(n_pad, 0, -1) * dlat
+            yt = np.concatenate([yt_pad, yt])
+            data_pad = np.full((n_pad, data.shape[1]), 0, dtype=data.dtype)
+            data = np.concatenate([data_pad, data], axis=0)
+        
+        # Pad latitude if source doesn't cover upper bound
+        if yt[-1] < lat_lim[1]:
+            n_pad = int(np.ceil((lat_lim[1] - yt[-1]) / dlat))
+            yt_pad = yt[-1] + np.arange(1, n_pad + 1) * dlat
+            yt = np.concatenate([yt, yt_pad])
+            data_pad = np.full((n_pad, data.shape[1]), 0, dtype=data.dtype)
+            data = np.concatenate([data, data_pad], axis=0)
+        
+        # Pad longitude coordinates and data if source doesn't cover lower bound
+        if xt[0] > lon_lim[0]:
+            n_pad = int(np.ceil((xt[0] - lon_lim[0]) / dlon))
+            xt_pad = xt[0] - np.arange(n_pad, 0, -1) * dlon
+            xt = np.concatenate([xt_pad, xt])
+            data_pad = np.full((data.shape[0], n_pad), 0, dtype=data.dtype)
+            data = np.concatenate([data_pad, data], axis=1)
+        
+        # Pad longitude if source doesn't cover upper bound
+        if xt[-1] < lon_lim[1]:
+            n_pad = int(np.ceil((lon_lim[1] - xt[-1]) / dlon))
+            xt_pad = xt[-1] + np.arange(1, n_pad + 1) * dlon
+            xt = np.concatenate([xt, xt_pad])
+            data_pad = np.full((data.shape[0], n_pad), 0, dtype=data.dtype)
+            data = np.concatenate([data, data_pad], axis=1)
+        
+        # ---- Create Coordinate Grids ----
         xt_grid, yt_grid = np.meshgrid(xt, yt)
 
         readin.close()
-        del [readin, yt, xt, index1, index2]
+        del [readin, dlat, dlon]
 
     else:
         return 1
@@ -101,4 +121,3 @@ def preprocessor(filename, fire_id, time, lat_lim, lon_lim):
     f.close()
 
     return 0
-
