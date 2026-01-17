@@ -5,12 +5,14 @@ import perimeter_inputgen
 import argparse
 import os
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("start_date", help="Start date in YYYY-MM-DDTHH:MM:SS format")
     parser.add_argument("end_date", help="End date in YYYY-MM-DDTHH:MM:SS format")
+    parser.add_argument("thread_count", type=int, help="Number of threads to use")
+    parser.add_argument("thread_index", type=int, help="Index of thread")
     args = parser.parse_args()
 
     namelist = pd.read_csv("./input/namelist", header=None, delimiter="=")
@@ -20,7 +22,11 @@ def main():
         gdf = gpd.read_file(os.path.join('fires', file))
         gdf = gdf.sort_values(by='primarykey', ascending=True)
         for _, perimeter in gdf.iterrows():
-            if perimeter["primarykey"].split("|")[0] != "CONUS" or perimeter["primarykey"].split("|")[2] < args.start_date or perimeter["primarykey"].split("|")[2] > args.end_date:
+            t = datetime.fromisoformat(perimeter["primarykey"].split("|")[2])
+            delta = (t - datetime(1970,1,1)).total_seconds() / 3600 / 12
+            if delta % args.thread_count != args.thread_index:
+                continue
+            if perimeter["primarykey"].split("|")[0] != "CONUS" or perimeter["primarykey"].split("|")[2] < args.start_date or perimeter["primarykey"].split("|")[2] >= args.end_date:
                 break
 
             time = datetime.fromisoformat(perimeter["primarykey"].split("|")[2])
@@ -46,7 +52,7 @@ def main():
             try:
                 if not os.path.exists("./input/" + str(perimeter["fireid"]) + "/" + (time + timedelta(hours=12)).strftime("%Y%m%d%H")):
                     os.makedirs("./input/" + str(perimeter["fireid"]) + "/" + (time + timedelta(hours=12)).strftime("%Y%m%d%H"))
-                perim_preprocessor.preprocessor(namelist[0][1:], str(perimeter["fireid"]), (time + timedelta(hours=12)).strftime("%Y%m%d%H"), lat_lim, lon_lim)
+                perim_preprocessor.preprocessor(namelist[0][1:] + ".out", str(perimeter["fireid"]), (time + timedelta(hours=12)).strftime("%Y%m%d%H"), lat_lim, lon_lim)
             except:
                 break
             for i in range(12):

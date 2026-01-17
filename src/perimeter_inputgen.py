@@ -141,6 +141,10 @@ def normalization(var, NN):
 def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim):
     logger.info(f"Starting main_driver: initial_hour={initial_hour}, forecast_hour={forecast_hour}, "
                 f"input={f_input}, output={f_output}, lat_lim={lat_lim}, lon_lim={lon_lim}")
+
+    if os.path.exists(f_output):
+        logger.warning(f"Output file {f_output} already exists. Skipping...")
+        return 0
     
     namelist = pd.read_csv("./input/namelist", header=None, delimiter="=")
     namelist = namelist[1]
@@ -820,8 +824,8 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
         del [index, loc, X_fire, X_lat, X_lon]
     del [lw, num, INPUT, FIRE, LAT, LON, MASK]
 
-    if "INPUTFRAME" in locals():
-        logger.info(f"Initial frame count: {INPUTFRAME.shape[0] if INPUTFRAME is not None else 0}")
+    if "INPUTFRAME" in locals() and INPUTFRAME is not None:
+        logger.info(f"Initial frame count: {INPUTFRAME.shape[0]}")
     else:
         logger.warning(f"{tt} no available frames.")
         return 2
