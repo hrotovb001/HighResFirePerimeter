@@ -338,29 +338,35 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     xt[xt < 0] = xt[xt < 0] + 360
     index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
     index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
-
-    data = np.squeeze(readin["surface_type"][:, :])
-    data = np.flipud(data)
-    logger.debug(f"Surface type data original shape: {data.shape}")
+    len1 = len(index1)
 
     # ast, hour x lat x lon
     if (index1[0] == 0) & (index2[0] == 0):
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        data = data[index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
+        data = readin["surface_type"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] : index2[-1] + 2
+        ]
     elif index1[0] == 0:
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        data = data[index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
+        data = readin["surface_type"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] - 1 : index2[-1] + 2
+        ]
     elif index2[0] == 0:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        data = data[index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
+        data = readin["surface_type"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] : index2[-1] + 2
+        ]
     else:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        data = data[index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
+        data = readin["surface_type"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] - 1 : index2[-1] + 2
+        ]
 
+    data = np.flipud(data)
     xt_grid, yt_grid = np.meshgrid(xt, yt)
     data_grid = mapping(
         LAT,
@@ -508,36 +514,49 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     yt = np.round(yt, 3)
     xt = np.round(xt, 3)
     xt[xt < 0] = xt[xt < 0] + 360
-    vci_npp = np.flipud(np.asarray(readin["VCI"][:]))
-    tci_npp = np.flipud(np.asarray(readin["TCI"][:]))
     index1 = np.squeeze(np.argwhere((yt >= lat_lim[0]) & (yt <= lat_lim[1])))
     index2 = np.squeeze(np.argwhere((xt >= lon_lim[0]) & (xt <= lon_lim[1])))
+    len1 = len(yt)
 
     if (index1[0] == 0) & (index2[0] == 0):
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        vci_npp = vci_npp[index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
-        tci_npp = tci_npp[index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
+        vci_npp = readin["VCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] : index2[-1] + 2
+        ]
+        tci_npp = readin["TCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] : index2[-1] + 2
+        ]
     elif index1[0] == 0:
         yt = yt[index1[0] : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        vci_npp = vci_npp[index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
-        tci_npp = tci_npp[index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
+        vci_npp = readin["VCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] - 1 : index2[-1] + 2
+        ]
+        tci_npp = readin["TCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] - 1 : index2[-1] + 2
+        ]
     elif index2[0] == 0:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] : index2[-1] + 2]
-        vci_npp = vci_npp[index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
-        tci_npp = tci_npp[index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
+        vci_npp = readin["VCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] : index2[-1] + 2
+        ]
+        tci_npp = readin["TCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] : index2[-1] + 2
+        ]
     else:
         yt = yt[index1[0] - 1 : index1[-1] + 2]
         xt = xt[index2[0] - 1 : index2[-1] + 2]
-        vci_npp = vci_npp[
-            index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
+        vci_npp = readin["VCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] - 1 : index2[-1] + 2
         ]
-        tci_npp = tci_npp[
-            index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
+        tci_npp = readin["TCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] - 1 : index2[-1] + 2
         ]
 
+    vci_npp = np.flipud(np.asarray(vci_npp))
+    tci_npp = np.flipud(np.asarray(tci_npp))
     vci_npp[vci_npp == -999] = np.nan
     tci_npp[tci_npp == -999] = np.nan
     readin.close()
@@ -546,26 +565,38 @@ def main_driver(initial_hour, forecast_hour, f_input, f_output, lat_lim, lon_lim
     # j01
     logger.debug(f"Reading VHI from J01: {filename_j01}")
     readin = Dataset(filename_j01)
-    vci_j01 = np.flipud(np.asarray(readin["VCI"][:]))
-    tci_j01 = np.flipud(np.asarray(readin["TCI"][:]))
 
     if (index1[0] == 0) & (index2[0] == 0):
-        vci_j01 = vci_j01[index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
-        tci_j01 = tci_j01[index1[0] : index1[-1] + 2, index2[0] : index2[-1] + 2]
-    elif index1[0] == 0:
-        vci_j01 = vci_j01[index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
-        tci_j01 = tci_j01[index1[0] : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2]
-    elif index2[0] == 0:
-        vci_j01 = vci_j01[index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
-        tci_j01 = tci_j01[index1[0] - 1 : index1[-1] + 2, index2[0] : index2[-1] + 2]
-    else:
-        vci_j01 = vci_j01[
-            index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
+        vci_j01 = readin["VCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] : index2[-1] + 2
         ]
-        tci_j01 = tci_j01[
-            index1[0] - 1 : index1[-1] + 2, index2[0] - 1 : index2[-1] + 2
+        tci_j01 = readin["TCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] : index2[-1] + 2
+        ]
+    elif index1[0] == 0:
+        vci_j01 = readin["VCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] - 1 : index2[-1] + 2
+        ]
+        tci_j01 = readin["TCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0], index2[0] - 1 : index2[-1] + 2
+        ]
+    elif index2[0] == 0:
+        vci_j01 = readin["VCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] : index2[-1] + 2
+        ]
+        tci_j01 = readin["TCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] : index2[-1] + 2
+        ]
+    else:
+        vci_j01 = readin["VCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] - 1 : index2[-1] + 2
+        ]
+        tci_j01 = readin["TCI"][
+            len1 - index1[-1] - 2 : len1 - index1[0] + 1, index2[0] - 1 : index2[-1] + 2
         ]
 
+    vci_j01 = np.flipud(np.asarray(vci_j01))
+    tci_j01 = np.flipud(np.asarray(tci_j01))
     vci_j01[vci_j01 == -999] = np.nan
     tci_j01[tci_j01 == -999] = np.nan
     readin.close()
