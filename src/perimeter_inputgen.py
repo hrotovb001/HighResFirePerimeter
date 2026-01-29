@@ -54,11 +54,11 @@ def file_finder(item, date, initial_hour, hour):
         if week == lastweek:
             return (
                 str(namelist[25].replace(" ", ""))
-                + "/npp/VHP.G04.C07.npp.P2020"
+                + "/npp/VHP.G04.C07.npp.P2025"
                 + ("%03d" % (lastweek - 1))
                 + ".VH.nc",
                 str(namelist[25].replace(" ", ""))
-                + "/j01/VHP.G04.C07.j01.P2020"
+                + "/j01/VHP.G04.C07.j01.P2025"
                 + ("%03d" % (lastweek - 1))
                 + ".VH.nc",
             )
