@@ -30,37 +30,36 @@ def parse_filename(filename):
 def rename_files(directory, dry_run=False):
     renamed_count = 0
 
-    for root, dirs, files in os.walk(directory):
-        for filename in files:
-            if not filename.endswith('.nc'):
-                continue
+    root, dirs, files = next(os.walk(directory))
+    for filename in files:
+        if not filename.endswith('.nc'):
+            continue
 
-            old_path = os.path.join(root, filename)
-            satellite, pcode = parse_filename(filename)
+        old_path = os.path.join(root, filename)
+        satellite, pcode = parse_filename(filename)
 
-            if not satellite or not pcode:
-                print(f"Skipping {filename}: cannot parse satellite or date", file=sys.stderr)
-                continue
+        if not satellite or not pcode:
+            print(f"Skipping {filename}: cannot parse satellite or date", file=sys.stderr)
+            continue
 
-            new_filename = f"VHP.G04.C07.{satellite}.{pcode}.VH.nc"
-            
-            # Create satellite subdirectory
-            new_root = os.path.join(root, satellite)
-            os.makedirs(new_root, exist_ok=True)
-            new_path = os.path.join(new_root, new_filename)
-            
-            if dry_run:
-                print(f"Would rename: {old_path}")
-                print(f"          to: {new_path}")
-                print()
-            else:
-                try:
-                    os.rename(old_path, new_path)
-                    print(f"Renamed: {old_path} -> {new_path}")
-                    renamed_count += 1
-                except OSError as e:
-                    print(f"Error renaming {old_path}: {e}", file=sys.stderr)
-        break
+        new_filename = f"VHP.G04.C07.{satellite}.{pcode}.VH.nc"
+        
+        # Create satellite subdirectory
+        new_root = os.path.join(root, satellite)
+        os.makedirs(new_root, exist_ok=True)
+        new_path = os.path.join(new_root, new_filename)
+        
+        if dry_run:
+            print(f"Would rename: {old_path}")
+            print(f"          to: {new_path}")
+            print()
+        else:
+            try:
+                os.rename(old_path, new_path)
+                print(f"Renamed: {old_path} -> {new_path}")
+                renamed_count += 1
+            except OSError as e:
+                print(f"Error renaming {old_path}: {e}", file=sys.stderr)
 
     return renamed_count
 
