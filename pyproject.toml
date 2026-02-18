@@ -28,6 +28,11 @@ dependencies = [
     "folium (>=0.20.0,<0.21.0)",
     "mapclassify (>=2.10.0,<3.0.0)",
     "geocube (>=0.7.1,<0.8.0)",
+    "optuna (>=4.7.0,<5.0.0)",
+    "optuna-integration (>=4.7.0,<5.0.0)",
+    "dask (>=2026.1.2,<2027.0.0)",
+    "zarr (>=3.1.5,<4.0.0)",
+    "optuna-dashboard (>=0.20.0,<0.21.0)",
 ]
 
 

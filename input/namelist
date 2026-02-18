@@ -1,6 +1,6 @@
 perim_input  = viirs.perim.conus
-model_input  = fire.init.conus
-model_output = fire.pred.conus
+model_input  = perim.init.conus
+model_output = perim.pred.conus
 
 frp_source = 0
 
@@ -25,11 +25,10 @@ man_lat  = 38.68
 man_lon  = -78.35
 man_lvl  = 200
 
-path_frp  = /home/hrotovb001/RAVE
-path_elv  = /home/hrotovb001/MERIT_DEM
-path_ast  = /home/hrotovb001/VIIRS-AST
-path_fh   = /home/hrotovb001/GLAD
-path_vhi  = /home/hrotovb001/VIIRS-VHI
-path_mete = /home/hrotovb001/HRRR
-path_peri = /home/hrotovb001/Perimeter
-
+path_frp  = /mnt/d/RAVE
+path_elv  = /mnt/d/MERIT_DEM
+path_ast  = /mnt/d/AST
+path_fh   = /mnt/d/GLAD
+path_vhi  = /mnt/d/VHI
+path_mete = /mnt/f/HRRR
+path_peri = /mnt/d/Perimeters

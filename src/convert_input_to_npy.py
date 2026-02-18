@@ -1,6 +1,7 @@
 import argparse
 from netCDF4 import Dataset
 import dask.array as da
+import zarr
 import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
@@ -76,18 +77,31 @@ def convert_to_npy(output_folder):
         if not os.path.exists(os.path.join('tmp', '{}'.format(parent_folder))):
             os.makedirs('tmp/{}'.format(parent_folder))
 
-        X_fire = np.memmap(os.path.join('tmp', '{}'.format(parent_folder), 'X.bin'), dtype='float32', mode='w+', shape=(len(X_fire_list), 12, 135, 135, 13))
-        y_fire = np.memmap(os.path.join('tmp', '{}'.format(parent_folder), 'y.bin'), dtype='float32', mode='w+', shape=(len(y_fire_list), 135, 135))
+        path = os.path.join('tmp', '{}'.format(parent_folder))
+        X_shape = (len(X_fire_list),) + X_fire_list[0].shape
+        X_fire = zarr.open(
+            path + '/X.zarr',
+            mode='a',
+            shape=X_shape,
+            chunks=(1,) + X_shape[1:],
+            dtype='float32'
+        )
+        y_shape = (len(y_fire_list),) + y_fire_list[0].shape
+        y_fire = zarr.open(
+            path + '/y.zarr',
+            mode='a',
+            shape=y_shape,
+            chunks=(1,) + y_shape[1:],
+            dtype='float32'
+        )
         X_fire[:] = np.stack(X_fire_list, axis=0)
         y_fire[:] = np.stack(y_fire_list, axis=0)
 
-        X.append(X_fire)
-        y.append(y_fire)
+        X.append(path + '/X.zarr')
+        y.append(path + '/y.zarr')
 
-    X_da = [da.from_array(arr).rechunk((1,) + arr.shape[1:]) for arr in X]
-    y_da = [da.from_array(arr).rechunk((1,) + arr.shape[1:]) for arr in y]
-    X_da = da.concatenate(X_da, axis=0)
-    y_da = da.concatenate(y_da, axis=0)
+    X_da = da.concatenate([da.from_zarr(x) for x in X], axis=0)
+    y_da = da.concatenate([da.from_zarr(y) for y in y], axis=0)
     X_da.to_zarr(os.path.join(output_folder, 'X.zarr'))
     y_da.to_zarr(os.path.join(output_folder, 'y.zarr'))
 
